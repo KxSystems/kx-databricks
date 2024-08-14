@@ -1,0 +1,32 @@
+default:
+  tags:
+    - k8s-aws-tools
+  interruptible: true
+
+stages:
+  - github-sync
+
+sync_to_github:
+  image: python:3.11
+  stage: github-sync
+  variables:
+    KXSYSTEMS_GITHUB_REPO_NAME: "databricks-samples"
+    KXSYSTEMS_GITHUB_REPO: "https://${GITHUB_PAT}@github.com/KxSystems/${KXSYSTEMS_GITHUB_REPO_NAME}.git"
+  before_script:
+    - git config --global user.email "${GITHUB_USER_EMAIL}"
+    - git config --global user.name "${GITHUB_USERNAME}"
+    - git config --global url.https://${GITHUB_PAT}@github.com/.insteadOf https://github.com/
+  script:
+    - git remote add github "${KXSYSTEMS_GITHUB_REPO}"
+    - |
+      git fetch
+      git fetch github
+    - |
+      # useful for debugging
+      git remote -v
+      git status
+      git reflog
+    - git push github HEAD:$CI_COMMIT_BRANCH --force
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
