@@ -10,7 +10,7 @@ sync_to_github:
   image: python:3.11
   stage: github-sync
   variables:
-    KXSYSTEMS_GITHUB_REPO_NAME: "kx-databricks"
+    KXSYSTEMS_GITHUB_REPO_NAME: "databricks-samples"
     KXSYSTEMS_GITHUB_REPO: "https://${GITHUB_PAT}@github.com/KxSystems/${KXSYSTEMS_GITHUB_REPO_NAME}.git"
   before_script:
     - git config --global user.email "${GITHUB_USER_EMAIL}"
@@ -18,36 +18,15 @@ sync_to_github:
     - git config --global url.https://${GITHUB_PAT}@github.com/.insteadOf https://github.com/
   script:
     - git remote add github "${KXSYSTEMS_GITHUB_REPO}"
-    - git fetch origin "$CI_COMMIT_BRANCH"
-    - git checkout -B "$CI_COMMIT_BRANCH" "origin/$CI_COMMIT_BRANCH"
     - |
-      # Clone the branch to a temporary directory and remove .gitlab-ci.yml before pushing
-      temp_dir=$(mktemp -d)
-      git clone . "$temp_dir" --branch "$CI_COMMIT_BRANCH" --single-branch
-      rm -f "$temp_dir/.gitlab-ci.yml"
-      cd "$temp_dir"
-
-      # Debugging commands
-      echo "=== Debugging Information ==="
+      git fetch
+      git fetch github
+    - |
+      # useful for debugging
       git remote -v
       git status
       git reflog
-      echo "============================="
-
-      # Add the GitHub remote in the temporary directory
-      git remote add github "${KXSYSTEMS_GITHUB_REPO}"
-      # Get the last commit message from GitLab Repo
-      commit_message=$(git log -1 --pretty=%B)
-
-
-      # Check if there are changes to commit
-      if [ -n "$(git status --porcelain)" ]; then
-        git add -A
-        git commit -m "Sync to Kx for Databricks: $commit_message" || true
-        git push github "$CI_COMMIT_BRANCH" --force
-      else
-        echo "No changes to push."
-      fi
+    - git push github HEAD:$CI_COMMIT_BRANCH --force
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
